@@ -70,7 +70,7 @@ const mkdb=()=>({
  doc:p=>{const[c,i]=p.split("/");return{set:d=>setDoc(doc(fs,c,i),d),onSnapshot:(a,b)=>onSnapshot(doc(fs,c,i),x=>a({exists:x.exists(),data:()=>x.data()}),b)}}
 });
 const EC=["식비","카페/간식","교통","주거/통신","생활용품","쇼핑","의료/건강","문화/여가","육아/교육","경조사","기타"];
-const IC=["남편 월급","와이프 월급","부수입","용돈","기타수입"];
+const IC=["남편 월급","와이프 월급","초과근무수당","부수입","용돈","기타수입"];
 const PAYS=["카드","현금","계좌이체"];
 const COL=["#2f6fed","#e5484d","#16a36a","#f5a524","#8b5cf6","#e0559b","#0ea5b7","#a16207","#64748b","#ea580c","#84cc16"];
 const $=s=>document.querySelector(s);
@@ -99,7 +99,7 @@ function shiftM(d){const[y,m]=S.month.split("-").map(Number);const x=new Date(y,
 function txRow(t){
   const ci=(t.type==="exp"?EC:IC).indexOf(t.cat);
   return `<div class="tx" data-edit="${esc(t.id)}"><div class="dot" style="background:${COL[(ci<0?8:ci)%COL.length]}">${esc((t.cat||"?").slice(0,1))}</div>
-  <div class="m"><b>${esc(t.memo||t.cat)}</b><span class="sub"><b>${t.date?(+t.date.slice(5,7))+"/"+(+t.date.slice(8))+" ":""}</b>${esc(t.cat)} · ${esc(t.pay||"")}<span class="tag" style="background:${wcol(t.uid)}">${esc(who(t.uid))}</span></span></div>
+  <div class="m"><b>${esc(t.memo||t.cat)}</b><span class="sub"><b>${t.date?(+t.date.slice(5,7))+"/"+(+t.date.slice(8))+" ":""}</b>${esc(t.cat)}${t.pay?" · "+esc(t.pay):""}<span class="tag" style="background:${wcol(t.uid)}">${esc(who(t.uid))}</span></span></div>
   <div class="${t.type==="exp"?"exp":"inc"}"><b>${t.type==="exp"?"-":"+"}${won(t.amount)}</b></div></div>`}
 
 function homeV(){
@@ -178,7 +178,7 @@ function openForm(t){
   const o=document.createElement("div");o.className="ov";o.id="ov";
   o.innerHTML=`<div class="sh"><div class="seg"><button data-ty="exp">지출</button><button data-ty="inc">수입</button></div><div class="f">
   <input id="fa" type="number" inputmode="numeric" placeholder="금액" value="${F.amount||""}" style="font-size:22px;font-weight:700">
-  <div class="chips" id="fcat"></div><div class="chips" id="fpay"></div><div class="sub">누가 썼나</div><div class="chips" id="fwho"></div>
+  <div class="chips" id="fcat"></div><div class="chips" id="fpay"></div><div class="sub" id="fwl">누가 썼나</div><div class="chips" id="fwho"></div>
   <input id="fd" type="date" value="${F.date}"><input id="fm" placeholder="메모 (선택)" value="${esc(F.memo)}">
   <button class="btn" id="fs">저장</button>${t?'<button class="btn d" id="fdel">삭제</button>':""}<button class="btn g" id="fx">닫기</button></div></div>`;
   document.body.appendChild(o);paintForm();
@@ -187,11 +187,12 @@ function paintForm(){
   document.querySelectorAll("[data-ty]").forEach(b=>b.classList.toggle("on",b.dataset.ty===F.type));
   const cs=F.type==="exp"?EC:IC;if(!cs.includes(F.cat)){F.cat=cs[0];if(F.cat==="남편 월급")F.uid="남편"}
   $("#fcat").innerHTML=cs.map(c=>`<button class="chip ${F.cat===c?"on":""}" data-c="${c}">${c}</button>`).join("");
+  $("#fpay").style.display=F.type==="inc"?"none":"";$("#fwl").textContent=F.type==="inc"?"누구 수입인가":"누가 썼나";
   $("#fwho").innerHTML=["남편","와이프","공동"].map(c=>`<button class="chip ${F.uid===c?"on":""}" data-w="${c}">${c}</button>`).join("");
   $("#fpay").innerHTML=PAYS.map(c=>`<button class="chip ${F.pay===c?"on":""}" data-p="${c}">${c}</button>`).join("")}
 async function saveTx(){
   const amt=+$("#fa").value;if(!(amt>0)){toast("금액을 입력해 주세요");return}
-  const d={type:F.type,amount:amt,cat:F.cat,pay:F.pay,date:$("#fd").value||dstr(new Date()),memo:$("#fm").value.trim(),uid:F.uid||S.uid,ts:F.ts||Date.now()};
+  const d={type:F.type,amount:amt,cat:F.cat,pay:F.type==="inc"?"":F.pay,date:$("#fd").value||dstr(new Date()),memo:$("#fm").value.trim(),uid:F.uid||S.uid,ts:F.ts||Date.now()};
   try{
     if(F.id)await db.collection("tx").doc(F.id).set(d);else await db.collection("tx").add(d);
     $("#ov").remove();
