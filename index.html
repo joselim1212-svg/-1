@@ -99,7 +99,7 @@ function shiftM(d){const[y,m]=S.month.split("-").map(Number);const x=new Date(y,
 function txRow(t){
   const ci=(t.type==="exp"?EC:IC).indexOf(t.cat);
   return `<div class="tx" data-edit="${esc(t.id)}"><div class="dot" style="background:${COL[(ci<0?8:ci)%COL.length]}">${esc((t.cat||"?").slice(0,1))}</div>
-  <div class="m"><b>${esc(t.memo||t.cat)}</b><span class="sub">${esc(t.cat)} · ${esc(t.pay||"")}<span class="tag" style="background:${wcol(t.uid)}">${esc(who(t.uid))}</span></span></div>
+  <div class="m"><b>${esc(t.memo||t.cat)}</b><span class="sub"><b>${t.date?(+t.date.slice(5,7))+"/"+(+t.date.slice(8))+" ":""}</b>${esc(t.cat)} · ${esc(t.pay||"")}<span class="tag" style="background:${wcol(t.uid)}">${esc(who(t.uid))}</span></span></div>
   <div class="${t.type==="exp"?"exp":"inc"}"><b>${t.type==="exp"?"-":"+"}${won(t.amount)}</b></div></div>`}
 
 function homeV(){
