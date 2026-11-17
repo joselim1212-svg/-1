@@ -103,17 +103,17 @@ function txRow(t){
   <div class="${t.type==="exp"?"exp":"inc"}"><b>${t.type==="exp"?"-":"+"}${won(t.amount)}</b></div></div>`}
 
 function homeV(){
-  const a=inM(),sp=sum(a,"exp"),inc=sum(a,"inc"),b=+S.set.budget||0,pc=b?sp/b*100:0,g=S.set.goal||{},ic=c=>a.filter(t=>t.type==="inc"&&t.cat===c).reduce((x,t)=>x+(+t.amount||0),0);
+  const a=inM(),sp=sum(a,"exp"),inc=sum(a,"inc"),b=+S.set.budget||0,bs=a.filter(t=>t.type==="exp"&&t.uid==="공동").reduce((x,t)=>x+(+t.amount||0),0),pc=b?bs/b*100:0,g=S.set.goal||{},ic=c=>a.filter(t=>t.type==="inc"&&t.cat===c).reduce((x,t)=>x+(+t.amount||0),0);
   let al="";
-  if(b&&pc>=100)al=`<div class="alert over">🚨 이번 달 예산을 ${won(sp-b)} 초과했어요</div>`;
-  else if(b&&pc>=80)al=`<div class="alert">⚠️ 예산의 ${Math.round(pc)}%를 썼어요 (남은 ${won(b-sp)})</div>`;
+  if(b&&pc>=100)al=`<div class="alert over">🚨 이번 달 공동 예산을 ${won(bs-b)} 초과했어요</div>`;
+  else if(b&&pc>=80)al=`<div class="alert">⚠️ 예산의 ${Math.round(pc)}%를 썼어요 (남은 ${won(b-bs)})</div>`;
   const gp=g.target?Math.min(100,g.saved/g.target*100):0;
   const rec=[...a].sort((x,y)=>(y.date+(y.ts||0)).localeCompare(x.date+(x.ts||0))).slice(0,6);
   return al+`<div class="card"><h3>이번 기간 지출</h3><div class="big exp">${won(sp)}</div>
   <div class="row sub" style="margin-top:6px"><span>수입 <b class="inc">${won(inc)}</b></span><span>잔액 <b>${won(inc-sp)}</b></span></div>
   <div class="sub" style="margin-top:6px">남편 월급 ${won(ic("남편 월급"))} · 와이프 월급 ${won(ic("와이프 월급"))}</div></div>
-  <div class="card"><h3>월 예산</h3>${b?`<div class="row"><b>${won(sp)} / ${won(b)}</b><span class="sub">${Math.round(pc)}%</span></div>
-  <div class="bar"><i style="width:${Math.min(100,pc)}%;background:${pc>=100?"var(--exp)":pc>=80?"var(--warn)":"var(--ac)"}"></i></div><div class="sub">${b>=sp?"남은 예산 "+won(b-sp):"초과 "+won(sp-b)}</div>`:`<div class="sub">설정 탭에서 월 예산을 정해 보세요</div>`}</div>
+  <div class="card"><h3>월 예산 (공동 지출)</h3>${b?`<div class="row"><b>${won(bs)} / ${won(b)}</b><span class="sub">${Math.round(pc)}%</span></div>
+  <div class="bar"><i style="width:${Math.min(100,pc)}%;background:${pc>=100?"var(--exp)":pc>=80?"var(--warn)":"var(--ac)"}"></i></div><div class="sub">${b>=bs?"남은 예산 "+won(b-bs):"초과 "+won(bs-b)} · 작성자가 공동인 지출만 차감</div>`:`<div class="sub">설정 탭에서 월 예산을 정해 보세요</div>`}</div>
   ${g.target?`<div class="card"><h3>🎯 ${esc(g.name||"저축 목표")}</h3><div class="row"><b>${won(g.saved)} / ${won(g.target)}</b><span class="sub">${Math.round(gp)}%</span></div><div class="bar"><i style="width:${gp}%;background:var(--inc)"></i></div></div>`:""}
   <div class="card"><h3>최근 내역</h3>${rec.length?rec.map(txRow).join(""):'<div class="sub">아직 내역이 없어요. ＋ 버튼으로 추가!</div>'}</div>`}
 
@@ -152,7 +152,7 @@ function statsV(){
 
 function setV(){
   const s=S.set,g=s.goal||{};
-  return `<div class="card f"><h3>월 예산</h3><input id="sb" type="number" inputmode="numeric" placeholder="월 예산 (원)" value="${s.budget||""}"><div class="sub">한 기간 동안 쓰려는 지출 한도예요. 지출이 예산의 80%를 넘으면 '초과 직전' 알림이, 예산을 넘기면 '초과' 알림이 떠요. 내역을 저장할 때와 홈 화면에서 앱 안에서 알려줘요.</div><div class="sub">한 달이 시작되는 날 (카드 결제 기준일, 1~28)</div><input id="sd" type="number" inputmode="numeric" min="1" max="28" value="${sd()}"></div>
+  return `<div class="card f"><h3>월 예산</h3><input id="sb" type="number" inputmode="numeric" placeholder="월 예산 (원)" value="${s.budget||""}"><div class="sub">한 기간 동안 쓰려는 공동 지출 한도예요. 작성자가 '공동'인 지출만 예산에서 차감되고, 남편·와이프 개인 지출은 차감되지 않아요. 지출이 예산의 80%를 넘으면 '초과 직전' 알림이, 예산을 넘기면 '초과' 알림이 떠요. 내역을 저장할 때와 홈 화면에서 앱 안에서 알려줘요.</div><div class="sub">한 달이 시작되는 날 (카드 결제 기준일, 1~28)</div><input id="sd" type="number" inputmode="numeric" min="1" max="28" value="${sd()}"></div>
   <div class="card f"><h3>🎯 저축 목표</h3><input id="gn" placeholder="목표 이름 (예: 여행 자금)" value="${esc(g.name)}">
   <input id="gt" type="number" inputmode="numeric" placeholder="목표 금액" value="${g.target||""}"><input id="gs" type="number" inputmode="numeric" placeholder="현재까지 모은 금액" value="${g.saved||""}"></div>
   <div class="card f"><h3>🔁 고정지출 (매월 자동 입력)</h3>
@@ -196,7 +196,7 @@ async function saveTx(){
   try{
     if(F.id)await db.collection("tx").doc(F.id).set(d);else await db.collection("tx").add(d);
     $("#ov").remove();
-    if(d.type==="exp"&&S.set.budget){const[ka,kb]=rng(keyOf(d.date));const sp=S.tx.filter(t=>t.type==="exp"&&t.date>=ka&&t.date<kb&&t.id!==F.id).reduce((s,t)=>s+(+t.amount||0),0)+amt;
+    if(d.type==="exp"&&d.uid==="공동"&&S.set.budget){const[ka,kb]=rng(keyOf(d.date));const sp=S.tx.filter(t=>t.type==="exp"&&t.date>=ka&&t.date<kb&&t.uid==="공동"&&t.id!==F.id).reduce((s,t)=>s+(+t.amount||0),0)+amt;
       if(sp>S.set.budget)toast("🚨 월 예산을 초과했어요");else if(sp>=S.set.budget*.8)toast("⚠️ 예산의 "+Math.round(sp/S.set.budget*100)+"%를 썼어요")}
   }catch(e){toast("저장 실패, 다시 시도해 주세요")}}
 
