@@ -150,20 +150,22 @@ function statsV(){
   <div class="card"><h3>일별 지출</h3><div class="days">${dd.map((v,i)=>`<div title="${new Date(st.getTime()+i*864e5).getMonth()+1}/${new Date(st.getTime()+i*864e5).getDate()} ${won(v)}" style="height:${Math.max(2,v/mx*100)}%"></div>`).join("")}</div>
   <div class="sub" style="margin-top:8px">지난 기간 대비 ${pm?(df>=0?"+":"")+won(df):"비교 데이터 없음"}</div></div>`}
 
+function fxCard(k){
+  const s=S.set,fe=S.fe||{},L=(k==="fx"?s.fixed:s.fsav)||[],nm=k==="fx"?"고정지출":"고정저축",sm=a=>a.reduce((x,f)=>x+(+f.amount||0),0);
+  return `<div class="card f"><h3>${k==="fx"?"🔁":"🏦"} ${nm} (매월 자동 입력)</h3><div class="sub">총 ${nm}: <b>${won(sm(L))}</b> / 월${k==="fs"?" (부부 총 자산에 매달 합산돼요)":""}</div>
+  ${["남편","와이프","공동"].map(o=>{const it=L.filter(f=>(f.owner||"공동")===o),ed=fe.k===k&&fe.o===o,v=g=>ed&&g!=null?g:"";
+  return `<div class="f" style="border-top:1px solid var(--line);padding-top:10px;margin-top:6px"><b>${o} ${nm} <span class="sub">${won(sm(it))}</span></b>
+  ${it.map(f=>`<div class="row"><span>${esc(f.name)} · 매월 ${f.day}일<br><span class="sub">${k==="fx"?esc(f.cat)+" · "+esc(f.pay)+" · ":""}${won(f.amount)}</span></span><span><button class="chip" data-ef="${k}|${esc(f.id)}">수정</button> <button class="chip" data-df="${k}|${esc(f.id)}">삭제</button></span></div>`).join("")||'<div class="sub">없음</div>'}
+  <input id="${k}n-${o}" placeholder="이름" value="${esc(v(fe.name))}"><input id="${k}a-${o}" type="number" inputmode="numeric" placeholder="금액" value="${v(fe.amount)}"><input id="${k}d-${o}" type="number" inputmode="numeric" placeholder="매월 며칠 (1~31)" value="${v(fe.day)}">
+  ${k==="fx"?`<select id="fxc-${o}">${EC.map(c=>`<option ${ed&&fe.cat===c?"selected":""}>${c}</option>`).join("")}</select><select id="fxp-${o}">${PAYS.map(c=>`<option ${ed&&fe.pay===c?"selected":""}>${c}</option>`).join("")}</select>`:""}
+  <button class="btn" data-add="${k}|${o}">${ed?"수정 저장":o+" 추가"}</button>${ed?'<button class="btn g" data-fcancel="1">취소</button>':""}</div>`}).join("")}
+  ${k==="fx"?'<div class="sub">작성자가 공동인 지출만 월 예산에서 차감돼요. 수정은 앞으로의 입력부터 적용돼요.</div>':""}</div>`}
 function setV(){
   const s=S.set,fe=S.fe||{},totF=(s.fixed||[]).reduce((x,f)=>x+(+f.amount||0),0),totS=(s.fsav||[]).reduce((x,f)=>x+(+f.amount||0),0);
   return `<div class="card f"><h3>월 예산</h3><input id="sb" type="number" inputmode="numeric" placeholder="월 예산 (원)" value="${s.budget||""}"><div class="sub">한 기간 동안 쓰려는 공동 지출 한도예요. 작성자가 '공동'인 지출만 예산에서 차감되고, 남편·와이프 개인 지출은 차감되지 않아요. 지출이 예산의 80%를 넘으면 '초과 직전' 알림이, 예산을 넘기면 '초과' 알림이 떠요. 내역을 저장할 때와 홈 화면에서 앱 안에서 알려줘요.</div><div class="sub">한 달이 시작되는 날 (카드 결제 기준일, 1~28)</div><input id="sd" type="number" inputmode="numeric" min="1" max="28" value="${sd()}"></div>
   ${S.uid==="와이프"?`<div class="card f"><h3>💝 와이프 용돈 (월)</h3><input id="aw" type="number" inputmode="numeric" placeholder="월 용돈 (원)" value="${s.allowance===undefined?400000:s.allowance}"><div class="sub">와이프 폰에서만 보여요. 지출 입력 때 '와이프 용돈으로 쓴 지출'을 누르면 여기서 차감되고, 공동 예산에는 안 잡혀요.</div></div>`:""}
-  <div class="card f"><h3>🏦 고정저축 (매월 자동 입력)</h3><div class="sub">총 고정저축: <b>${won(totS)}</b> / 월 (부부 총 자산에 매달 합산돼요)</div>
-  ${(s.fsav||[]).map(f=>`<div class="row"><span>${esc(f.name)} · 매월 ${f.day}일<br><span class="sub">${won(f.amount)}</span></span><span><button class="chip" data-efs="${esc(f.id)}">수정</button> <button class="chip" data-delfs="${esc(f.id)}">삭제</button></span></div>`).join("")||'<div class="sub">등록된 고정저축이 없어요</div>'}
-  <input id="fsn" placeholder="이름 (예: 적금, 청약)" value="${esc(fe.k==="fs"?fe.name:"")}"><input id="fsa" type="number" inputmode="numeric" placeholder="금액" value="${fe.k==="fs"?fe.amount:""}"><input id="fsd" type="number" inputmode="numeric" placeholder="매월 며칠 (1~31)" value="${fe.k==="fs"?fe.day:""}">
-  <button class="btn" id="fsadd">${fe.k==="fs"?"수정 저장":"고정저축 추가"}</button>${fe.k==="fs"?'<button class="btn g" data-fcancel="1">취소</button>':""}</div>
-  <div class="card f"><h3>🔁 고정지출 (매월 자동 입력)</h3><div class="sub">총 고정지출: <b>${won(totF)}</b> / 월</div>
-  ${(s.fixed||[]).map(f=>`<div class="row"><span>${esc(f.name)} · 매월 ${f.day}일<br><span class="sub">${esc(f.cat)} · ${esc(f.pay)} · ${won(f.amount)}</span></span><span><button class="chip" data-efx="${esc(f.id)}">수정</button> <button class="chip" data-delfx="${esc(f.id)}">삭제</button></span></div>`).join("")||'<div class="sub">등록된 고정지출이 없어요</div>'}
-  <input id="fxn" placeholder="이름 (예: 월세)" value="${esc(fe.k==="fx"?fe.name:"")}"><input id="fxa" type="number" inputmode="numeric" placeholder="금액" value="${fe.k==="fx"?fe.amount:""}"><input id="fxd" type="number" inputmode="numeric" placeholder="매월 며칠 (1~31)" value="${fe.k==="fx"?fe.day:""}">
-  <select id="fxc">${EC.map(c=>`<option ${fe.k==="fx"&&fe.cat===c?"selected":""}>${c}</option>`).join("")}</select><select id="fxp">${PAYS.map(c=>`<option ${fe.k==="fx"&&fe.pay===c?"selected":""}>${c}</option>`).join("")}</select>
-  <button class="btn" id="fxadd">${fe.k==="fx"?"수정 저장":"고정지출 추가"}</button>${fe.k==="fx"?'<button class="btn g" data-fcancel="1">취소</button>':""}
-  <div class="sub">수정은 앞으로의 입력부터 적용돼요. 이미 자동 입력된 내역은 그대로예요.</div></div>
+  ${fxCard("fs")}
+  ${fxCard("fx")}
   <div class="card f"><h3>기타</h3><button class="btn g" id="exp">📥 엑셀로 내보내기</button><button class="btn g" id="th">🌓 다크/라이트 전환</button><button class="btn g" id="lo">🚪 로그아웃 / 작성자 변경</button>
   <div class="sub">와이프 폰에서도 같은 주소를 열고 같은 이메일/비밀번호로 로그인하면 실시간으로 함께 써요.</div></div>`}
 
@@ -210,10 +212,10 @@ function runFixed(){
   if(S.ran||!S.lt||!S.ls||!db)return;S.ran=true;
   const now=new Date(),today=dstr(now),ym=ymOf(now),dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate(),ids=new Set(S.tx.map(t=>t.id));
   (S.set.fixed||[]).forEach(f=>{const day=Math.min(+f.day||1,dim);if(now.getDate()<day)return;const id="fx_"+f.id+"_"+ym;if(ids.has(id))return;
-    db.collection("tx").doc(id).set({type:"exp",amount:+f.amount,cat:f.cat,pay:f.pay,date:ym+"-"+pad(day),memo:f.name+" (고정)",uid:"공동",ts:Date.now()}).catch(()=>{})});
+    db.collection("tx").doc(id).set({type:"exp",amount:+f.amount,cat:f.cat,pay:f.pay,date:ym+"-"+pad(day),memo:f.name+" (고정)",uid:f.owner||"공동",ts:Date.now()}).catch(()=>{})});
   (S.set.fsav||[]).forEach(f=>{const since=f.since||today;let y=+since.slice(0,4),m=+since.slice(5,7);
     for(;;){const k=y+"-"+pad(m);if(k>ym)break;const ds=k+"-"+pad(Math.min(+f.day||1,new Date(y,m,0).getDate()));
-      if(ds>=since&&ds<=today){const id="fs_"+f.id+"_"+k;if(!ids.has(id))db.collection("tx").doc(id).set({type:"sav",amount:+f.amount,cat:"고정저축",pay:"",date:ds,memo:f.name+" (고정저축)",uid:"공동",ts:Date.now()}).catch(()=>{})}
+      if(ds>=since&&ds<=today){const id="fs_"+f.id+"_"+k;if(!ids.has(id))db.collection("tx").doc(id).set({type:"sav",amount:+f.amount,cat:"고정저축",pay:"",date:ds,memo:f.name+" (고정저축)",uid:f.owner||"공동",ts:Date.now()}).catch(()=>{})}
       m++;if(m>12){m=1;y++}}})}
 
 const calc=p=>{const y=+p.years,r=+p.rate/100,A=+p.amount;let pr,it;if(p.kind==="적금"){const n=Math.round(y*12);pr=A*n;it=A*n*(n+1)/2*r/12}else{pr=A;it=A*r*y}return{pr,it,net:it*(1-.154)}};
@@ -261,17 +263,15 @@ document.addEventListener("click",e=>{
   else if(D.ty){F.type=D.ty;paintForm()}else if(D.c){F.cat=D.c;if(D.c==="남편 월급")F.uid="남편";if(D.c==="와이프 월급")F.uid="와이프";paintForm()}else if(D.p){F.pay=D.p;paintForm()}else if(D.w){F.uid=D.w;if(D.w==="공동")F.allow=false;paintForm()}else if(D.al){F.allow=!F.allow;if(F.allow)F.uid="와이프";paintForm()}
   else if(t.id==="fs")saveTx();else if(t.id==="fx")$("#ov").remove();
   else if(t.id==="fdel"){if(confirm("이 내역을 삭제할까요?"))db.collection("tx").doc(F.id).delete().then(()=>$("#ov").remove()).catch(()=>toast("삭제 실패"))}
-  else if(t.id==="fxadd"){const n=$("#fxn").value.trim(),a=+$("#fxa").value,d=+$("#fxd").value;if(!n||!(a>0)||!(d>=1&&d<=31)){toast("이름·금액·날짜를 확인해 주세요");return}
-    const o={name:n,amount:a,day:d,cat:$("#fxc").value,pay:$("#fxp").value},e=S.fe&&S.fe.k==="fx"?S.fe.id:null;
-    S.set.fixed=e?S.set.fixed.map(f=>f.id===e?{...f,...o}:f):[...(S.set.fixed||[]),{id:Date.now().toString(36),...o}];S.fe=null;S.ran=false;save();runFixed();render();toast(e?"수정했어요":"고정지출을 추가했어요")}
-  else if(t.id==="fsadd"){const n=$("#fsn").value.trim(),a=+$("#fsa").value,d=+$("#fsd").value;if(!n||!(a>0)||!(d>=1&&d<=31)){toast("이름·금액·날짜를 확인해 주세요");return}
-    const o={name:n,amount:a,day:d},e=S.fe&&S.fe.k==="fs"?S.fe.id:null;
-    S.set.fsav=e?S.set.fsav.map(f=>f.id===e?{...f,...o}:f):[...(S.set.fsav||[]),{id:Date.now().toString(36),since:dstr(new Date()),...o}];S.fe=null;S.ran=false;save();runFixed();render();toast(e?"수정했어요":"고정저축을 추가했어요")}
-  else if(D.efx){const f=(S.set.fixed||[]).find(x=>x.id===D.efx);if(f){S.fe={k:"fx",...f};render()}}
-  else if(D.efs){const f=(S.set.fsav||[]).find(x=>x.id===D.efs);if(f){S.fe={k:"fs",...f};render()}}
+  else if(D.add){const[k,o]=D.add.split("|"),n=$("#"+k+"n-"+o).value.trim(),a=+$("#"+k+"a-"+o).value,d=+$("#"+k+"d-"+o).value;
+    if(!n||!(a>0)||!(d>=1&&d<=31)){toast("이름·금액·날짜를 확인해 주세요");return}
+    const key=k==="fx"?"fixed":"fsav",ob={name:n,amount:a,day:d,owner:o};if(k==="fx"){ob.cat=$("#fxc-"+o).value;ob.pay=$("#fxp-"+o).value}
+    const e=S.fe&&S.fe.k===k&&S.fe.o===o?S.fe.id:null;
+    S.set[key]=e?S.set[key].map(f=>f.id===e?{...f,...ob}:f):[...(S.set[key]||[]),{id:Date.now().toString(36),...(k==="fs"?{since:dstr(new Date())}:{}),...ob}];
+    S.fe=null;S.ran=false;save();runFixed();render();toast(e?"수정했어요":"추가했어요")}
+  else if(D.ef){const[k,id]=D.ef.split("|"),f=(S.set[k==="fx"?"fixed":"fsav"]||[]).find(x=>x.id===id);if(f){S.fe={k,o:f.owner||"공동",...f};render()}}
+  else if(D.df){const[k,id]=D.df.split("|"),key=k==="fx"?"fixed":"fsav";if(confirm("삭제할까요?")){S.set[key]=S.set[key].filter(f=>f.id!==id);save()}}
   else if(D.fcancel){S.fe=null;render()}
-  else if(D.delfx){S.set.fixed=S.set.fixed.filter(f=>f.id!==D.delfx);save()}
-  else if(D.delfs){if(confirm("고정저축을 삭제할까요? 이미 쌓인 저축 내역은 유지돼요.")){S.set.fsav=S.set.fsav.filter(f=>f.id!==D.delfs);save()}}
   else if(t.id==="padd"){const n=$("#pn").value.trim(),A=+$("#pa").value,y=+$("#py").value,r=+$("#pr").value,st=$("#pd").value;let mt=$("#pm").value;
     if(!n||!(A>0)||!(y>0)||$("#pr").value===""||!st){toast("이름·금액·기간·금리·가입일을 확인해 주세요");return}
     if(!mt){const[a0,b0,c0]=st.split("-").map(Number);mt=dstr(new Date(a0,b0-1+Math.round(y*12),c0))}
