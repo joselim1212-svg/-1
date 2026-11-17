@@ -91,7 +91,7 @@ const sd=()=>Math.min(28,Math.max(1,+S.set.startDay||12));
 const rng=k=>{const[y,m]=k.split("-").map(Number);return[k+"-"+pad(sd()),ymOf(new Date(y,m,1))+"-"+pad(sd())]};
 const keyOf=ds=>{const x=new Date(ds+"T00:00");return x.getDate()>=sd()?ymOf(x):ymOf(new Date(x.getFullYear(),x.getMonth()-1,1))};
 const curKey=()=>keyOf(dstr(new Date()));
-const rl=()=>{const[a,b]=rng(S.month),e=new Date(new Date(b+"T00:00").getTime()-864e5),st=new Date(a+"T00:00");return (st.getMonth()+1)+"."+st.getDate()+" ~ "+(e.getMonth()+1)+"."+e.getDate()};
+const rl=()=>{const[a,b]=rng(S.month),e=new Date(new Date(b+"T00:00").getTime()-864e5),st=new Date(a+"T00:00");return (st.getMonth()+1)+"월"+st.getDate()+"일~"+(e.getMonth()+1)+"월"+e.getDate()+"일"};
 const inM=()=>{const[a,b]=rng(S.month);return S.tx.filter(t=>(t.date||"")>=a&&(t.date||"")<b)};
 const sum=(a,ty)=>a.filter(t=>t.type===ty).reduce((s,t)=>s+(+t.amount||0),0);
 function shiftM(d){const[y,m]=S.month.split("-").map(Number);const x=new Date(y,m-1+d,1);S.month=ymOf(x);render()}
@@ -167,7 +167,7 @@ function render(){
   const nav=[["home","🏠","홈"],["list","📒","내역"],["stats","📊","통계"],["set","⚙️","설정"]];
   $("#nav").innerHTML=nav.map(n=>`<button class="${S.tab===n[0]?"on":""}" data-tab="${n[0]}"><span>${n[1]}</span>${n[2]}</button>`).join("");
   const[y,m]=S.month.split("-");
-  const mn=S.tab==="set"?"":`<div class="mn"><button data-mm="-1">‹</button><span style="text-align:center">${y}년 ${+m}월<br><span class="sub" style="font-weight:400">${rl()}</span></span><button data-mm="1">›</button></div>`;
+  const mn=S.tab==="set"?"":`<div class="mn"><button data-mm="-1">‹</button><span style="text-align:center">${+m}월(${rl()})<br><span class="sub" style="font-weight:400">${y}년</span></span><button data-mm="1">›</button></div>`;
   $("#app").innerHTML=mn+({home:homeV,list:listV,stats:statsV,set:setV}[S.tab])();
   if(S.tab==="list"){$("#lst").innerHTML=listItems();$("#fw").value=S.who}
 }
