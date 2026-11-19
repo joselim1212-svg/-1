@@ -220,15 +220,7 @@ function runFixed(){
       m++;if(m>12){m=1;y++}}})}
 
 const calc=p=>{const y=+p.years,r=+p.rate/100,A=+p.amount;let pr,it;if(p.kind==="적금"){const n=Math.round(y*12);pr=A*n;it=A*n*(n+1)/2*r/12}else{pr=A;it=A*r*y}return{pr,it,net:it*(1-.154)}};
-function prRow(p,td){const c=calc(p),dd=Math.ceil((new Date(p.mat+"T00:00")-td)/864e5);return `<div style="border-top:1px solid var(--line);padding:10px 0;margin-top:8px"><div class="row"><b>${esc(p.name)} <span class="tag" style="background:var(--ac)">${esc(p.kind)}</span></b><span><button class="chip" data-epr="${esc(p.id)}">수정</button> <button class="chip" data-dpr="${esc(p.id)}">삭제</button></span></div>
-  <div class="sub">${p.kind==="적금"?"월 "+won(p.amount)+" 납입":"예치 "+won(p.amount)} · ${p.years}년 · 연 ${p.rate}%<br>가입 ${esc(p.start)} → 만기 <b>${esc(p.mat)}</b> (${dd>0?"D-"+dd:dd===0?"오늘 만기":"만기 지남"})<br>원금 ${won(c.pr)} · 예상 이자 <b class="inc">${won(c.it)}</b> (세후 약 ${won(c.net)})<br>만기 수령액 <b>${won(c.pr+c.it)}</b></div></div>`}
-function prodV(){
-  const P=S.set.prods||[],pe=S.pe||{},td=new Date(dstr(new Date())+"T00:00"),tot=P.reduce((x,p)=>x+calc(p).it,0);
-  const groups=["남편","와이프",""].map(o=>{const it=P.filter(p=>(p.owner||"")===o);if(o===""&&!it.length)return"";
-    return `<div class="card"><h3>${o?o+" 예적금":"소유자 미지정 (수정해서 지정해 주세요)"}</h3><div class="sub">예상 이자(세전): <b>${won(it.reduce((x,p)=>x+calc(p).it,0))}</b></div>${it.map(p=>prRow(p,td)).join("")||'<div class="sub" style="margin-top:6px">등록된 예적금이 없어요</div>'}</div>`}).join("");
-  return `<div class="card"><h3>예상 이자 합계 (세전)</h3><div class="big">${won(tot)}</div></div>
-  ${groups}
-  <div class="card f"><h3>${S.pe?"예적금 수정":"예적금 추가"}</h3><input id="pn" placeholder="이름 (예: OO은행 적금)" value="${esc(pe.name)}">
+function prForm(pe){return `<div class="f"><input id="pn" placeholder="이름 (예: OO은행 적금)" value="${esc(pe.name)}">
   <select id="po">${["남편","와이프"].map(o=>`<option ${(pe.owner||"남편")===o?"selected":""}>${o}</option>`).join("")}</select>
   <select id="pk"><option ${pe.kind!=="적금"?"selected":""}>예금</option><option ${pe.kind==="적금"?"selected":""}>적금</option></select>
   <input id="pa" type="number" inputmode="numeric" placeholder="예금은 예치금, 적금은 월 납입액 (원)" value="${pe.amount||""}">
@@ -236,8 +228,16 @@ function prodV(){
   <input id="pr" type="number" step="0.01" inputmode="decimal" placeholder="연 금리 (%, 예: 3.5)" value="${pe.rate===undefined?"":pe.rate}">
   <div class="sub">가입일</div><input id="pd" type="date" value="${esc(pe.start||dstr(new Date()))}">
   <div class="sub">만기일 (가입일·기간을 넣으면 자동 계산, 직접 수정도 가능)</div><input id="pm" type="date" value="${esc(pe.mat||"")}">
-  <button class="btn" id="padd">${S.pe?"수정 저장":"추가"}</button>${S.pe?'<button class="btn g" data-pcancel="1">취소</button>':""}
-  <div class="sub">이자는 단리 기준 추정치예요 (적금은 매월 납입 단리 방식). 세후는 일반과세 15.4%를 뺀 값이고, 실제 금액은 상품 조건에 따라 달라요.</div></div>`}
+  <button class="btn" id="padd">${S.pe?"수정 저장":"추가"}</button>${S.pe?'<button class="btn g" data-pcancel="1">취소</button>':""}</div>`}
+function prRow(p,td){if(S.pe&&S.pe.id===p.id)return `<div style="border-top:1px solid var(--line);padding:10px 0;margin-top:8px"><b>✏️ 수정 중</b>${prForm(S.pe)}</div>`;const c=calc(p),dd=Math.ceil((new Date(p.mat+"T00:00")-td)/864e5);return `<div style="border-top:1px solid var(--line);padding:10px 0;margin-top:8px"><div class="row"><b>${esc(p.name)} <span class="tag" style="background:var(--ac)">${esc(p.kind)}</span></b><span><button class="chip" data-epr="${esc(p.id)}">수정</button> <button class="chip" data-dpr="${esc(p.id)}">삭제</button></span></div>
+  <div class="sub">${p.kind==="적금"?"월 "+won(p.amount)+" 납입":"예치 "+won(p.amount)} · ${p.years}년 · 연 ${p.rate}%<br>가입 ${esc(p.start)} → 만기 <b>${esc(p.mat)}</b> (${dd>0?"D-"+dd:dd===0?"오늘 만기":"만기 지남"})<br>원금 ${won(c.pr)} · 예상 이자 <b class="inc">${won(c.it)}</b> (세후 약 ${won(c.net)})<br>만기 수령액 <b>${won(c.pr+c.it)}</b></div></div>`}
+function prodV(){
+  const P=S.set.prods||[],pe=S.pe||{},td=new Date(dstr(new Date())+"T00:00"),tot=P.reduce((x,p)=>x+calc(p).it,0);
+  const groups=["남편","와이프",""].map(o=>{const it=P.filter(p=>(p.owner||"")===o);if(o===""&&!it.length)return"";
+    return `<div class="card"><h3>${o?o+" 예적금":"소유자 미지정 (수정해서 지정해 주세요)"}</h3><div class="sub">예상 이자(세전): <b>${won(it.reduce((x,p)=>x+calc(p).it,0))}</b></div>${it.map(p=>prRow(p,td)).join("")||'<div class="sub" style="margin-top:6px">등록된 예적금이 없어요</div>'}</div>`}).join("");
+  return `<div class="card"><h3>예상 이자 합계 (세전)</h3><div class="big">${won(tot)}</div></div>
+  ${groups}
+  ${S.pe?"":`<div class="card f"><h3>예적금 추가</h3>${prForm({})}<div class="sub">이자는 단리 기준 추정치예요 (적금은 매월 납입 단리 방식). 세후는 일반과세 15.4%를 뺀 값이고, 실제 금액은 상품 조건에 따라 달라요.</div></div>`}`}
 
 function assetV(){
   const b=S.set.base||{},ow=["남편","와이프"],B=o=>({dep:0,sav:0,park:0,stock:0,sub:0,hc:0,hd:0,...((b.m||{})[o]||{})}),s4=x=>(+x.dep||0)+(+x.park||0)+(+x.stock||0)+(+x.sav||0)+(+x.sub||0)+(+x.hc||0)+(+x.hd||0),
@@ -294,7 +294,7 @@ document.addEventListener("click",e=>{
     if(!mt){const[a0,b0,c0]=st.split("-").map(Number);mt=dstr(new Date(a0,b0-1+Math.round(y*12),c0))}
     const o={name:n,owner:$("#po").value,kind:$("#pk").value,amount:A,years:y,rate:r,start:st,mat:mt};
     S.set.prods=S.pe?(S.set.prods||[]).map(p=>p.id===S.pe.id?{...p,...o}:p):[...(S.set.prods||[]),{id:Date.now().toString(36),...o}];S.pe=null;save();render();toast("저장했어요")}
-  else if(D.epr){S.pe=(S.set.prods||[]).find(p=>p.id===D.epr)||null;render()}
+  else if(D.epr){S.pe=(S.set.prods||[]).find(p=>p.id===D.epr)||null;render();setTimeout(()=>{const x=$("#pn");if(x)x.scrollIntoView({block:"center",behavior:"smooth"})},60)}
   else if(D.dpr){if(confirm("이 예적금을 삭제할까요?")){S.set.prods=S.set.prods.filter(p=>p.id!==D.dpr);save()}}
   else if(D.pcancel){S.pe=null;render()}
   else if(D.clrb){S.set.base={...S.set.base,dep:0,sav:0,park:0,stock:0};save();render()}
