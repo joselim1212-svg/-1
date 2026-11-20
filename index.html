@@ -71,7 +71,7 @@ const mkdb=()=>({
 });
 const EC=["식비","카페/간식","교통","주거/통신","생활용품","쇼핑","의료/건강","문화/여가","육아/교육","경조사","기타"];
 const IC=["남편 월급","와이프 월급","초과근무수당","부수입","용돈","기타수입"];
-const PAYS=["카드","현금","계좌이체"];
+const PAYS=["카드","현금","계좌이체","파킹통장"];
 const COL=["#2f6fed","#e5484d","#16a36a","#f5a524","#8b5cf6","#e0559b","#0ea5b7","#a16207","#64748b","#ea580c","#84cc16"];
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -152,13 +152,14 @@ function statsV(){
 
 function fxCard(k){
   const s=S.set,fe=S.fe||{},L=(k==="fx"?s.fixed:s.fsav)||[],nm=k==="fx"?"고정지출":"고정저축",sm=a=>a.reduce((x,f)=>x+(+f.amount||0),0);
+  const fm=(o,ed)=>{const v=g=>ed&&g!=null?g:"";return `<input id="${k}n-${o}" placeholder="이름" value="${esc(v(fe.name))}"><input id="${k}a-${o}" type="number" inputmode="numeric" placeholder="금액" value="${v(fe.amount)}"><input id="${k}d-${o}" type="number" inputmode="numeric" placeholder="매월 며칠 (1~31)" value="${v(fe.day)}">
+  ${k==="fx"?`<select id="fxc-${o}">${EC.map(c=>`<option ${ed&&fe.cat===c?"selected":""}>${c}</option>`).join("")}</select><select id="fxp-${o}">${PAYS.map(c=>`<option ${ed&&fe.pay===c?"selected":""}>${c}</option>`).join("")}</select>`:""}
+  <button class="btn" data-add="${k}|${o}">${ed?"수정 저장":o+" 추가"}</button>${ed?'<button class="btn g" data-fcancel="1">취소</button>':""}`};
   return `<div class="card f"><h3>${k==="fx"?"🔁":"🏦"} ${nm} (매월 자동 입력)</h3><div class="sub">총 ${nm}: <b>${won(sm(L))}</b> / 월${k==="fs"?" (부부 총 자산에 매달 합산돼요)":""}</div>
   ${["남편","와이프"].map(o=>{const it=L.filter(f=>(f.owner||"공동")===o),ed=fe.k===k&&fe.o===o,v=g=>ed&&g!=null?g:"";
   return `<div class="f" style="border-top:1px solid var(--line);padding-top:10px;margin-top:6px"><b>${o} ${nm} <span class="sub">${won(sm(it))}</span></b>
-  ${it.map(f=>`<div class="row"><span>${esc(f.name)} · 매월 ${f.day}일<br><span class="sub">${k==="fx"?esc(f.cat)+" · "+esc(f.pay)+" · ":""}${won(f.amount)}</span></span><span><button class="chip" data-ef="${k}|${esc(f.id)}">수정</button> <button class="chip" data-df="${k}|${esc(f.id)}">삭제</button></span></div>`).join("")||'<div class="sub">없음</div>'}
-  <input id="${k}n-${o}" placeholder="이름" value="${esc(v(fe.name))}"><input id="${k}a-${o}" type="number" inputmode="numeric" placeholder="금액" value="${v(fe.amount)}"><input id="${k}d-${o}" type="number" inputmode="numeric" placeholder="매월 며칠 (1~31)" value="${v(fe.day)}">
-  ${k==="fx"?`<select id="fxc-${o}">${EC.map(c=>`<option ${ed&&fe.cat===c?"selected":""}>${c}</option>`).join("")}</select><select id="fxp-${o}">${PAYS.map(c=>`<option ${ed&&fe.pay===c?"selected":""}>${c}</option>`).join("")}</select>`:""}
-  <button class="btn" data-add="${k}|${o}">${ed?"수정 저장":o+" 추가"}</button>${ed?'<button class="btn g" data-fcancel="1">취소</button>':""}</div>`}).join("")}
+  ${it.map(f=>ed&&fe.id===f.id?`<div class="f" style="border:1px solid var(--ac);border-radius:10px;padding:8px"><b>✏️ 수정 중</b>${fm(o,ed)}</div>`:`<div class="row"><span>${esc(f.name)} · 매월 ${f.day}일<br><span class="sub">${k==="fx"?esc(f.cat)+" · "+esc(f.pay)+" · ":""}${won(f.amount)}</span></span><span><button class="chip" data-ef="${k}|${esc(f.id)}">수정</button> <button class="chip" data-df="${k}|${esc(f.id)}">삭제</button></span></div>`).join("")||'<div class="sub">없음</div>'}
+${ed?"":fm(o,ed)}</div>`}).join("")}
   ${(()=>{const lg=L.filter(f=>(f.owner||"공동")==="공동");return lg.length?`<div class="f" style="border-top:1px solid var(--line);padding-top:10px;margin-top:6px"><b>예전 공동 항목</b><div class="sub">남편/와이프 칸에 다시 입력한 뒤 여기서 삭제해 주세요</div>${lg.map(f=>`<div class="row"><span>${esc(f.name)} · 매월 ${f.day}일<br><span class="sub">${won(f.amount)}</span></span><button class="chip" data-df="${k}|${esc(f.id)}">삭제</button></div>`).join("")}</div>`:""})()}
   ${k==="fx"?'<div class="sub">고정지출은 월 예산(공동 지출)에서 차감되지 않아요. 수정은 앞으로의 입력부터 적용돼요.</div>':""}</div>`}
 function setV(){
@@ -186,7 +187,7 @@ function openForm(t){
   const o=document.createElement("div");o.className="ov";o.id="ov";
   o.innerHTML=`<div class="sh"><div class="seg"><button data-ty="exp">지출</button><button data-ty="inc">수입</button></div><div class="f">
   <input id="fa" type="number" inputmode="numeric" placeholder="금액" value="${F.amount||""}" style="font-size:22px;font-weight:700">
-  <div class="chips" id="fcat"></div><div class="chips" id="fpay"></div><div class="sub" id="fwl">누가 썼나</div><div class="chips" id="fwho"></div><div class="chips" id="fal"></div>
+  <div class="chips" id="fcat"></div><div class="chips" id="fpay"></div><div class="sub" id="fph"></div><div class="sub" id="fwl">누가 썼나</div><div class="chips" id="fwho"></div><div class="chips" id="fal"></div>
   <input id="fd" type="date" value="${F.date}"><input id="fm" placeholder="메모 (선택)" value="${esc(F.memo)}">
   <button class="btn" id="fs">저장</button>${t?'<button class="btn d" id="fdel">삭제</button>':""}<button class="btn g" id="fx">닫기</button></div></div>`;
   document.body.appendChild(o);paintForm();
@@ -195,6 +196,7 @@ function paintForm(){
   document.querySelectorAll("[data-ty]").forEach(b=>b.classList.toggle("on",b.dataset.ty===F.type));
   const cs=F.type==="exp"?EC:IC;if(F.type==="inc"&&F.uid!=="남편"&&F.uid!=="와이프")F.uid=S.uid;if(!cs.includes(F.cat)){F.cat=cs[0];if(F.cat==="남편 월급")F.uid="남편"}
   $("#fcat").innerHTML=cs.map(c=>`<button class="chip ${F.cat===c?"on":""}" data-c="${c}">${c}</button>`).join("");
+  $("#fph").textContent=F.type==="exp"&&(F.pay==="파킹통장"||F.pay==="계좌이체")?"작성자가 남편/와이프면 그 사람의 기본자산 파킹통장에서 자동 차감돼요 (공동·그외는 차감 안 돼요)":"";
   $("#fpay").style.display=F.type==="inc"?"none":"";$("#fwl").textContent=F.type==="inc"?(/월급/.test(F.cat)?"누구 수입인가":"누구 수입인가 (이 사람 파킹통장에 자동으로 더해져요)"):"누가 썼나";
   $("#fal").innerHTML=S.uid==="와이프"&&F.type==="exp"?`<button class="chip ${F.allow?"on":""}" data-al="1">💝 와이프 용돈으로 쓴 지출</button>`:"";
   $("#fwho").innerHTML=(F.type==="inc"?["남편","와이프"]:["남편","와이프","공동","그외"]).map(c=>`<button class="chip ${F.uid===c?"on":""}" data-w="${c}">${c}</button>`).join("");
@@ -239,21 +241,23 @@ function prodV(){
   ${groups}
   ${S.pe?"":`<div class="card f"><h3>예적금 추가</h3>${prForm({})}<div class="sub">이자는 단리 기준 추정치예요 (적금은 매월 납입 단리 방식). 세후는 일반과세 15.4%를 뺀 값이고, 실제 금액은 상품 조건에 따라 달라요.</div></div>`}`}
 
+function pkAdj(){const b=S.set.base||{},r={남편:0,와이프:0};
+  S.tx.forEach(t=>{if(r[t.uid]===undefined||t.allow||(b.date&&t.date<b.date))return;const a=+t.amount||0;
+    if(t.type==="inc"&&t.cat!=="남편 월급"&&t.cat!=="와이프 월급")r[t.uid]+=a;else if(t.type==="exp"&&(t.pay==="파킹통장"||t.pay==="계좌이체"))r[t.uid]-=a});return r}
 function assetV(){
   const b=S.set.base||{},ow=["남편","와이프"],B=o=>({dep:0,sav:0,park:0,stock:0,sub:0,hc:0,hd:0,...((b.m||{})[o]||{})}),s4=x=>(+x.dep||0)+(+x.park||0)+(+x.stock||0)+(+x.sav||0)+(+x.sub||0)+(+x.hc||0)+(+x.hd||0),
-    lg=s4(b),bo={남편:s4(B("남편")),와이프:s4(B("와이프"))},bt=bo.남편+bo.와이프+lg,cm=ymOf(new Date()),by={},co={남편:0,와이프:0,공동:0},pi={남편:0,와이프:0},pim={};
+    pk=pkAdj(),lg=s4(b),bo={남편:s4(B("남편"))+pk.남편,와이프:s4(B("와이프"))+pk.와이프},bt=bo.남편+bo.와이프+lg,cm=ymOf(new Date()),by={},co={남편:0,와이프:0,공동:0};
   S.tx.filter(t=>t.type==="sav"&&(!b.date||t.date>=b.date)).forEach(t=>{const k=t.date.slice(0,7);by[k]=(by[k]||0)+(+t.amount||0);co[co[t.uid]!==undefined?t.uid:"공동"]+=+t.amount||0});
-  S.tx.filter(t=>t.type==="inc"&&t.cat!=="남편 월급"&&t.cat!=="와이프 월급"&&(t.uid==="남편"||t.uid==="와이프")&&(!b.date||t.date>=b.date)).forEach(t=>{pi[t.uid]+=+t.amount||0;const k=t.date.slice(0,7);pim[k]=(pim[k]||0)+(+t.amount||0)});
-  const ks=Object.keys({...by,...pim}).sort(),st=b.date?b.date.slice(0,7):(ks[0]||cm),rows=[];let cum=0,y=+st.slice(0,4),m=+st.slice(5,7);
-  for(;;){const k=y+"-"+pad(m);if(k>cm)break;cum+=(by[k]||0)+(pim[k]||0);rows.push({k,add:(by[k]||0)+(pim[k]||0),tot:bt+cum});m++;if(m>12){m=1;y++}}
+  const ks=Object.keys(by).sort(),st=b.date?b.date.slice(0,7):(ks[0]||cm),rows=[];let cum=0,y=+st.slice(0,4),m=+st.slice(5,7);
+  for(;;){const k=y+"-"+pad(m);if(k>cm)break;cum+=by[k]||0;rows.push({k,add:by[k]||0,tot:bt+cum});m++;if(m>12){m=1;y++}}
   const mx=Math.max(1,cum),ln="border-top:1px solid var(--line);padding:8px 0;margin-top:6px";
   return `<div class="card"><h3>부부 총 자산</h3><div class="big">${won(bt+cum)}</div>
-  <div class="sub" style="margin-top:6px">기본자산 ${won(bt)} + 누적 고정저축 ${won(co.남편+co.와이프+co.공동)} + 수입 파킹 ${won(pi.남편+pi.와이프)}</div>
-  ${ow.map(o=>{const v=B(o);return `<div class="row" style="${ln}"><span><span class="tag" style="background:${wcol(o)};margin:0 6px 0 0">${o}</span>기본 ${won(bo[o])} + 저축 ${won(co[o])} + 수입 ${won(pi[o])}<br><span class="sub">예금 ${won(v.dep)} · 파킹 ${won(v.park+pi[o])} · 주식 ${won(v.stock)} · 적금 ${won(v.sav)} · 청약 ${won(v.sub)} · 집 계약금 ${won(v.hc)} · 집 보증금 ${won(v.hd)}</span></span><b>${won(bo[o]+co[o]+pi[o])}</b></div>`}).join("")}
+  <div class="sub" style="margin-top:6px">기본자산 ${won(bt)} + 누적 고정저축 ${won(cum)}</div>
+  ${ow.map(o=>{const v=B(o);return `<div class="row" style="${ln}"><span><span class="tag" style="background:${wcol(o)};margin:0 6px 0 0">${o}</span>기본 ${won(bo[o])} + 저축 ${won(co[o])}<br><span class="sub">예금 ${won(v.dep)} · 파킹 ${won(v.park+pk[o])} · 주식 ${won(v.stock)} · 적금 ${won(v.sav)} · 청약 ${won(v.sub)} · 집 계약금 ${won(v.hc)} · 집 보증금 ${won(v.hd)}</span></span><b>${won(bo[o]+co[o])}</b></div>`}).join("")}
   ${lg||co.공동?`<div class="row" style="${ln}"><span>기존 입력(공동)<br><span class="sub">기본 ${won(lg)} + 저축 ${won(co.공동)}</span></span><b>${won(lg+co.공동)}</b></div>${lg?'<button class="chip" data-clrb="1">기존 기본자산 입력 지우기</button>':""}`:""}</div>
   <div class="card"><h3>월별 자산 증가</h3>${rows.length>1?`<div style="display:flex;align-items:flex-end;gap:4px;height:140px;overflow-x:auto">${rows.map(r=>`<div style="flex:1;min-width:38px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center"><div style="width:100%;height:${Math.max(4,(r.tot-bt)/mx*85)}%;background:var(--inc);border-radius:3px 3px 0 0" title="${won(r.tot)}"></div><span class="sub" style="font-size:10px">${+r.k.slice(5)}월</span></div>`).join("")}</div>`:'<div class="sub">고정저축이 쌓이면 월별 그래프가 나와요</div>'}
   ${[...rows].reverse().map(r=>`<div class="row" style="${ln}"><span>${r.k.slice(0,4)}년 ${+r.k.slice(5)}월<br><span class="sub inc">+${won(r.add)}</span></span><b>${won(r.tot)}</b></div>`).join("")}</div>
-  ${ow.map(o=>{const v=B(o);return `<div class="card f"><h3>${o} 기본자산</h3>${[["dep","예금"],["park","파킹통장"],["stock","주식"],["sav","현재 적금 금액"],["sub","현재 청약 금액"],["hc","집 계약금"],["hd","집 보증금"]].map(([k,l])=>`<div class="row"><span style="flex:none;width:112px;font-weight:600">${l}</span><input id="bx-${o}-${k}" type="number" inputmode="numeric" placeholder="0" value="${v[k]||""}"></div>`).join("")}</div>`}).join("")}
+  ${ow.map(o=>{const v=B(o);return `<div class="card f"><h3>${o} 기본자산</h3>${[["dep","예금"],["park","파킹통장"],["stock","주식"],["sav","현재 적금 금액"],["sub","현재 청약 금액"],["hc","집 계약금"],["hd","집 보증금"]].map(([k,l])=>`<div class="row"><span style="flex:none;width:112px;font-weight:600">${l}</span><input id="bx-${o}-${k}" type="number" inputmode="numeric" placeholder="0" value="${(v[k]+(k==="park"?pk[o]:0))||""}"></div>`).join("")}</div>`}).join("")}
   <div class="card f"><h3>기준일</h3><input id="bd" type="date" value="${esc(b.date||"")}"><div class="sub">원래 가지고 있던 자산이에요. 기준일 이후의 고정저축부터 합산돼요. 현재 적금·청약은 이미 쌓인 잔액이라, 예적금 탭의 상품과 중복해서 넣지 않도록 주의해요.</div></div>`}
 
 function backup(){
@@ -287,7 +291,7 @@ document.addEventListener("click",e=>{
     const e=S.fe&&S.fe.k===k&&S.fe.o===o?S.fe.id:null;
     S.set[key]=e?S.set[key].map(f=>f.id===e?{...f,...ob}:f):[...(S.set[key]||[]),{id:Date.now().toString(36),...(k==="fs"?{since:dstr(new Date())}:{}),...ob}];
     S.fe=null;S.ran=false;save();runFixed();render();toast(e?"수정했어요":"추가했어요")}
-  else if(D.ef){const[k,id]=D.ef.split("|"),f=(S.set[k==="fx"?"fixed":"fsav"]||[]).find(x=>x.id===id);if(f){S.fe={k,o:f.owner||"공동",...f};render()}}
+  else if(D.ef){const[k,id]=D.ef.split("|"),f=(S.set[k==="fx"?"fixed":"fsav"]||[]).find(x=>x.id===id);if(f){S.fe={k,o:f.owner||"공동",...f};render();setTimeout(()=>{const x=$("#"+k+"n-"+S.fe.o);if(x)x.scrollIntoView({block:"center",behavior:"smooth"})},60)}}
   else if(D.df){const[k,id]=D.df.split("|"),key=k==="fx"?"fixed":"fsav";if(confirm("삭제할까요?")){S.set[key]=S.set[key].filter(f=>f.id!==id);save()}}
   else if(D.fcancel){S.fe=null;render()}
   else if(t.id==="padd"){const n=$("#pn").value.trim(),A=+$("#pa").value,y=+$("#py").value,r=+$("#pr").value,st=$("#pd").value;let mt=$("#pm").value;
@@ -313,7 +317,7 @@ document.addEventListener("change",e=>{const i=e.target.id;
   else if(i==="sd"){S.set.startDay=Math.min(28,Math.max(1,+e.target.value||12));S.month=curKey();save();render()}
   else if(i==="rf"){const f=e.target.files[0];if(f)restore(f);e.target.value=""}
   else if(i==="aw"){S.set.allowance=+e.target.value||0;save();render()}
-  else if(i.startsWith("bx-")||i==="bd"){const bb={...(S.set.base||{}),m:{}};["남편","와이프"].forEach(o=>{bb.m[o]={dep:+$("#bx-"+o+"-dep").value||0,park:+$("#bx-"+o+"-park").value||0,stock:+$("#bx-"+o+"-stock").value||0,sav:+$("#bx-"+o+"-sav").value||0,sub:+$("#bx-"+o+"-sub").value||0,hc:+$("#bx-"+o+"-hc").value||0,hd:+$("#bx-"+o+"-hd").value||0}});
+  else if(i.startsWith("bx-")||i==="bd"){const bb={...(S.set.base||{}),m:{}},pa=pkAdj();["남편","와이프"].forEach(o=>{bb.m[o]={dep:+$("#bx-"+o+"-dep").value||0,park:(+$("#bx-"+o+"-park").value||0)-pa[o],stock:+$("#bx-"+o+"-stock").value||0,sav:+$("#bx-"+o+"-sav").value||0,sub:+$("#bx-"+o+"-sub").value||0,hc:+$("#bx-"+o+"-hc").value||0,hd:+$("#bx-"+o+"-hd").value||0}});
     bb.date=$("#bd").value;if(!bb.date&&Object.values(bb.m).some(x=>x.dep||x.park||x.stock||x.sav||x.sub||x.hc||x.hd))bb.date=dstr(new Date());S.set.base=bb;save();render()}
   else if(i==="pd"||i==="py"){const st=$("#pd").value,yy=+$("#py").value;if(st&&yy>0){const[a0,b0,c0]=st.split("-").map(Number);$("#pm").value=dstr(new Date(a0,b0-1+Math.round(yy*12),c0))}}});
 
