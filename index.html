@@ -86,7 +86,7 @@ const defaults=()=>({budget:0,goal:{name:"",target:0,saved:0},fixed:[],startDay:
 try{const t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}
 function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
 function who(u){return u||"?"}
-function wcol(u){return u==="남편"?"var(--me)":u==="와이프"?"var(--sp)":"#8b5cf6"}
+function wcol(u){return u==="남편"?"var(--me)":u==="와이프"?"var(--sp)":u==="그외"?"#64748b":"#8b5cf6"}
 const sd=()=>Math.min(28,Math.max(1,+S.set.startDay||12));
 const rng=k=>{const[y,m]=k.split("-").map(Number);return[k+"-"+pad(sd()),ymOf(new Date(y,m,1))+"-"+pad(sd())]};
 const keyOf=ds=>{const x=new Date(ds+"T00:00");return x.getDate()>=sd()?ymOf(x):ymOf(new Date(x.getFullYear(),x.getMonth()-1,1))};
@@ -119,7 +119,7 @@ function homeV(){
 
 function listV(){
   return `<div class="card f"><input id="q" placeholder="🔍 메모·분류 검색" value="${esc(S.q)}">
-  <div class="row" style="gap:8px"><select id="fw"><option value="">작성자 전체</option><option value="남편">남편</option><option value="와이프">와이프</option><option value="공동">공동</option></select>
+  <div class="row" style="gap:8px"><select id="fw"><option value="">작성자 전체</option><option value="남편">남편</option><option value="와이프">와이프</option><option value="공동">공동</option><option value="그외">그외</option></select>
   <select id="fc"><option value="">분류 전체</option>${[...EC,...IC].map(c=>`<option ${S.cat===c?"selected":""}>${c}</option>`).join("")}</select></div></div><div id="lst"></div>`}
 function listItems(){
   const q=S.q.trim().toLowerCase();
@@ -193,11 +193,11 @@ function openForm(t){
 }
 function paintForm(){
   document.querySelectorAll("[data-ty]").forEach(b=>b.classList.toggle("on",b.dataset.ty===F.type));
-  const cs=F.type==="exp"?EC:IC;if(!cs.includes(F.cat)){F.cat=cs[0];if(F.cat==="남편 월급")F.uid="남편"}
+  const cs=F.type==="exp"?EC:IC;if(F.type==="inc"&&F.uid!=="남편"&&F.uid!=="와이프")F.uid=S.uid;if(!cs.includes(F.cat)){F.cat=cs[0];if(F.cat==="남편 월급")F.uid="남편"}
   $("#fcat").innerHTML=cs.map(c=>`<button class="chip ${F.cat===c?"on":""}" data-c="${c}">${c}</button>`).join("");
-  $("#fpay").style.display=F.type==="inc"?"none":"";$("#fwl").textContent=F.type==="inc"?"누구 수입인가":"누가 썼나";
+  $("#fpay").style.display=F.type==="inc"?"none":"";$("#fwl").textContent=F.type==="inc"?(/월급/.test(F.cat)?"누구 수입인가":"누구 수입인가 (이 사람 파킹통장에 자동으로 더해져요)"):"누가 썼나";
   $("#fal").innerHTML=S.uid==="와이프"&&F.type==="exp"?`<button class="chip ${F.allow?"on":""}" data-al="1">💝 와이프 용돈으로 쓴 지출</button>`:"";
-  $("#fwho").innerHTML=["남편","와이프","공동"].map(c=>`<button class="chip ${F.uid===c?"on":""}" data-w="${c}">${c}</button>`).join("");
+  $("#fwho").innerHTML=(F.type==="inc"?["남편","와이프"]:["남편","와이프","공동","그외"]).map(c=>`<button class="chip ${F.uid===c?"on":""}" data-w="${c}">${c}</button>`).join("");
   $("#fpay").innerHTML=PAYS.map(c=>`<button class="chip ${F.pay===c?"on":""}" data-p="${c}">${c}</button>`).join("")}
 async function saveTx(){
   const amt=+$("#fa").value;if(!(amt>0)){toast("금액을 입력해 주세요");return}
@@ -241,14 +241,15 @@ function prodV(){
 
 function assetV(){
   const b=S.set.base||{},ow=["남편","와이프"],B=o=>({dep:0,sav:0,park:0,stock:0,sub:0,hc:0,hd:0,...((b.m||{})[o]||{})}),s4=x=>(+x.dep||0)+(+x.park||0)+(+x.stock||0)+(+x.sav||0)+(+x.sub||0)+(+x.hc||0)+(+x.hd||0),
-    lg=s4(b),bo={남편:s4(B("남편")),와이프:s4(B("와이프"))},bt=bo.남편+bo.와이프+lg,cm=ymOf(new Date()),by={},co={남편:0,와이프:0,공동:0};
+    lg=s4(b),bo={남편:s4(B("남편")),와이프:s4(B("와이프"))},bt=bo.남편+bo.와이프+lg,cm=ymOf(new Date()),by={},co={남편:0,와이프:0,공동:0},pi={남편:0,와이프:0},pim={};
   S.tx.filter(t=>t.type==="sav"&&(!b.date||t.date>=b.date)).forEach(t=>{const k=t.date.slice(0,7);by[k]=(by[k]||0)+(+t.amount||0);co[co[t.uid]!==undefined?t.uid:"공동"]+=+t.amount||0});
-  const ks=Object.keys(by).sort(),st=b.date?b.date.slice(0,7):(ks[0]||cm),rows=[];let cum=0,y=+st.slice(0,4),m=+st.slice(5,7);
-  for(;;){const k=y+"-"+pad(m);if(k>cm)break;cum+=by[k]||0;rows.push({k,add:by[k]||0,tot:bt+cum});m++;if(m>12){m=1;y++}}
+  S.tx.filter(t=>t.type==="inc"&&t.cat!=="남편 월급"&&t.cat!=="와이프 월급"&&(t.uid==="남편"||t.uid==="와이프")&&(!b.date||t.date>=b.date)).forEach(t=>{pi[t.uid]+=+t.amount||0;const k=t.date.slice(0,7);pim[k]=(pim[k]||0)+(+t.amount||0)});
+  const ks=Object.keys({...by,...pim}).sort(),st=b.date?b.date.slice(0,7):(ks[0]||cm),rows=[];let cum=0,y=+st.slice(0,4),m=+st.slice(5,7);
+  for(;;){const k=y+"-"+pad(m);if(k>cm)break;cum+=(by[k]||0)+(pim[k]||0);rows.push({k,add:(by[k]||0)+(pim[k]||0),tot:bt+cum});m++;if(m>12){m=1;y++}}
   const mx=Math.max(1,cum),ln="border-top:1px solid var(--line);padding:8px 0;margin-top:6px";
   return `<div class="card"><h3>부부 총 자산</h3><div class="big">${won(bt+cum)}</div>
-  <div class="sub" style="margin-top:6px">기본자산 ${won(bt)} + 누적 고정저축 ${won(cum)}</div>
-  ${ow.map(o=>{const v=B(o);return `<div class="row" style="${ln}"><span><span class="tag" style="background:${wcol(o)};margin:0 6px 0 0">${o}</span>기본 ${won(bo[o])} + 저축 ${won(co[o])}<br><span class="sub">예금 ${won(v.dep)} · 파킹 ${won(v.park)} · 주식 ${won(v.stock)} · 적금 ${won(v.sav)} · 청약 ${won(v.sub)} · 집 계약금 ${won(v.hc)} · 집 보증금 ${won(v.hd)}</span></span><b>${won(bo[o]+co[o])}</b></div>`}).join("")}
+  <div class="sub" style="margin-top:6px">기본자산 ${won(bt)} + 누적 고정저축 ${won(co.남편+co.와이프+co.공동)} + 수입 파킹 ${won(pi.남편+pi.와이프)}</div>
+  ${ow.map(o=>{const v=B(o);return `<div class="row" style="${ln}"><span><span class="tag" style="background:${wcol(o)};margin:0 6px 0 0">${o}</span>기본 ${won(bo[o])} + 저축 ${won(co[o])} + 수입 ${won(pi[o])}<br><span class="sub">예금 ${won(v.dep)} · 파킹 ${won(v.park+pi[o])} · 주식 ${won(v.stock)} · 적금 ${won(v.sav)} · 청약 ${won(v.sub)} · 집 계약금 ${won(v.hc)} · 집 보증금 ${won(v.hd)}</span></span><b>${won(bo[o]+co[o]+pi[o])}</b></div>`}).join("")}
   ${lg||co.공동?`<div class="row" style="${ln}"><span>기존 입력(공동)<br><span class="sub">기본 ${won(lg)} + 저축 ${won(co.공동)}</span></span><b>${won(lg+co.공동)}</b></div>${lg?'<button class="chip" data-clrb="1">기존 기본자산 입력 지우기</button>':""}`:""}</div>
   <div class="card"><h3>월별 자산 증가</h3>${rows.length>1?`<div style="display:flex;align-items:flex-end;gap:4px;height:140px;overflow-x:auto">${rows.map(r=>`<div style="flex:1;min-width:38px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center"><div style="width:100%;height:${Math.max(4,(r.tot-bt)/mx*85)}%;background:var(--inc);border-radius:3px 3px 0 0" title="${won(r.tot)}"></div><span class="sub" style="font-size:10px">${+r.k.slice(5)}월</span></div>`).join("")}</div>`:'<div class="sub">고정저축이 쌓이면 월별 그래프가 나와요</div>'}
   ${[...rows].reverse().map(r=>`<div class="row" style="${ln}"><span>${r.k.slice(0,4)}년 ${+r.k.slice(5)}월<br><span class="sub inc">+${won(r.add)}</span></span><b>${won(r.tot)}</b></div>`).join("")}</div>
@@ -277,7 +278,7 @@ document.addEventListener("click",e=>{
   if(D.tab){S.tab=D.tab;render()}else if(D.mm)shiftM(+D.mm);
   else if(D.edit){const x=S.tx.find(v=>v.id===D.edit);if(x){if(x.type==="sav")toast("고정저축은 설정 탭에서 관리해요");else openForm(x)}}
   else if(t.id==="fab"){if(db)openForm();else toast("로그인이 필요해요")}
-  else if(D.ty){F.type=D.ty;paintForm()}else if(D.c){F.cat=D.c;if(D.c==="남편 월급")F.uid="남편";if(D.c==="와이프 월급")F.uid="와이프";paintForm()}else if(D.p){F.pay=D.p;paintForm()}else if(D.w){F.uid=D.w;if(D.w==="공동")F.allow=false;paintForm()}else if(D.al){F.allow=!F.allow;if(F.allow)F.uid="와이프";paintForm()}
+  else if(D.ty){F.type=D.ty;paintForm()}else if(D.c){F.cat=D.c;if(D.c==="남편 월급")F.uid="남편";if(D.c==="와이프 월급")F.uid="와이프";paintForm()}else if(D.p){F.pay=D.p;paintForm()}else if(D.w){F.uid=D.w;if(D.w==="공동"||D.w==="그외")F.allow=false;paintForm()}else if(D.al){F.allow=!F.allow;if(F.allow)F.uid="와이프";paintForm()}
   else if(t.id==="fs")saveTx();else if(t.id==="fx")$("#ov").remove();
   else if(t.id==="fdel"){if(confirm("이 내역을 삭제할까요?"))db.collection("tx").doc(F.id).delete().then(()=>$("#ov").remove()).catch(()=>toast("삭제 실패"))}
   else if(D.add){const[k,o]=D.add.split("|"),n=$("#"+k+"n-"+o).value.trim(),a=+$("#"+k+"a-"+o).value,d=+$("#"+k+"d-"+o).value;
