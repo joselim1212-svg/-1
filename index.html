@@ -86,7 +86,7 @@ const defaults=()=>({budget:0,goal:{name:"",target:0,saved:0},fixed:[],startDay:
 try{const t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}
 function toast(t){const e=document.createElement("div");e.className="toast";e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
 function who(u){return u||"?"}
-function wcol(u){return u==="남편"?"var(--me)":u==="와이프"?"var(--sp)":u==="그외"?"#64748b":"#8b5cf6"}
+function wcol(u){return u==="남편"?"var(--me)":u==="와이프"?"var(--sp)":String(u).startsWith("그외")?"#64748b":"#8b5cf6"}
 const sd=()=>Math.min(28,Math.max(1,+S.set.startDay||12));
 const rng=k=>{const[y,m]=k.split("-").map(Number);return[k+"-"+pad(sd()),ymOf(new Date(y,m,1))+"-"+pad(sd())]};
 const keyOf=ds=>{const x=new Date(ds+"T00:00");return x.getDate()>=sd()?ymOf(x):ymOf(new Date(x.getFullYear(),x.getMonth()-1,1))};
@@ -94,6 +94,7 @@ const curKey=()=>keyOf(dstr(new Date()));
 const rl=()=>{const[a,b]=rng(S.month),e=new Date(new Date(b+"T00:00").getTime()-864e5),st=new Date(a+"T00:00");return (st.getMonth()+1)+"월"+st.getDate()+"일~"+(e.getMonth()+1)+"월"+e.getDate()+"일"};
 const inM=()=>{const[a,b]=rng(S.month);return S.tx.filter(t=>vis(t)&&(t.date||"")>=a&&(t.date||"")<b)};
 const vis=t=>!t.allow||S.uid==="와이프";
+const payer=u=>{const m=/\((.+)\)/.exec(u||"");return m?m[1]:u};
 const sum=(a,ty)=>a.filter(t=>t.type===ty).reduce((s,t)=>s+(+t.amount||0),0);
 function shiftM(d){const[y,m]=S.month.split("-").map(Number);const x=new Date(y,m-1+d,1);S.month=ymOf(x);render()}
 
@@ -104,14 +105,17 @@ function txRow(t){
   <div class="${t.type==="exp"?"exp":t.type==="inc"?"inc":""}"><b>${t.type==="exp"?"-":t.type==="inc"?"+":"→"}${won(t.amount)}</b></div></div>`}
 
 function homeV(){
-  const a=inM(),sp=a.filter(t=>t.type==="exp"&&!t.allow).reduce((x,t)=>x+(+t.amount||0),0),inc=sum(a,"inc"),b=+S.set.budget||0,bs=a.filter(t=>t.type==="exp"&&t.uid==="공동").reduce((x,t)=>x+(+t.amount||0),0),pc=b?bs/b*100:0,sv=sum(a,"sav"),aw=+S.set.allowance||0,au=a.filter(t=>t.allow).reduce((x,t)=>x+(+t.amount||0),0),ic=c=>a.filter(t=>t.type==="inc"&&t.cat===c).reduce((x,t)=>x+(+t.amount||0),0);
+  const a=inM(),sp=a.filter(t=>t.type==="exp"&&!t.allow).reduce((x,t)=>x+(+t.amount||0),0),inc=sum(a,"inc"),b=+S.set.budget||0,bs=a.filter(t=>t.type==="exp"&&String(t.uid).startsWith("공동")).reduce((x,t)=>x+(+t.amount||0),0),pc=b?bs/b*100:0,sv=sum(a,"sav"),aw=+S.set.allowance||0,au=a.filter(t=>t.allow).reduce((x,t)=>x+(+t.amount||0),0),ic=c=>a.filter(t=>t.type==="inc"&&t.cat===c).reduce((x,t)=>x+(+t.amount||0),0);
+  const ps=o=>a.filter(t=>t.type==="exp"&&!t.allow&&payer(t.uid)===o).reduce((x,t)=>x+(+t.amount||0),0),pv=o=>a.filter(t=>t.type==="sav"&&t.uid===o).reduce((x,t)=>x+(+t.amount||0),0),un=a.filter(t=>t.type==="exp"&&!t.allow&&payer(t.uid)!=="남편"&&payer(t.uid)!=="와이프").reduce((x,t)=>x+(+t.amount||0),0);
   let al="";
   if(b&&pc>=100)al=`<div class="alert over">🚨 이번 달 공동 예산을 ${won(bs-b)} 초과했어요</div>`;
   else if(b&&pc>=80)al=`<div class="alert">⚠️ 예산의 ${Math.round(pc)}%를 썼어요 (남은 ${won(b-bs)})</div>`;
   const rec=[...a].sort((x,y)=>(y.date+(y.ts||0)).localeCompare(x.date+(x.ts||0))).slice(0,6);
   return al+`<div class="card"><h3>이번 기간 지출</h3><div class="big exp">${won(sp)}</div>
+  <div class="sub">남편 ${won(ps("남편"))} · 와이프 ${won(ps("와이프"))}${un?" · 미지정 "+won(un):""}</div>
   <div class="row sub" style="margin-top:6px"><span>수입 <b class="inc">${won(inc)}</b></span><span>잔액 <b>${won(inc-sp-sv)}</b></span></div>
   <div class="sub" style="margin-top:6px">남편 월급 ${won(ic("남편 월급"))} · 와이프 월급 ${won(ic("와이프 월급"))}</div><div class="sub">고정저축 ${won(sv)} (잔액에서 차감)</div></div>
+  <div class="card"><h3>각자 월급 정산 (월급 − 지출 − 고정저축)</h3>${["남편","와이프"].map(o=>{const sl=ic(o+" 월급"),e=ps(o),v=pv(o),r=sl-e-v;return `<div style="border-top:1px solid var(--line);padding:8px 0;margin-top:4px"><div class="row"><b><span class="tag" style="background:${wcol(o)};margin:0 6px 0 0">${o}</span>남은 돈</b><b class="${r<0?"exp":"inc"}">${won(r)}</b></div><div class="sub">월급 ${won(sl)} − 지출 ${won(e)} − 고정저축 ${won(v)}</div></div>`}).join("")}</div>
   <div class="card"><h3>월 예산 (공동 지출)</h3>${b?`<div class="row"><b>${won(bs)} / ${won(b)}</b><span class="sub">${Math.round(pc)}%</span></div>
   <div class="bar"><i style="width:${Math.min(100,pc)}%;background:${pc>=100?"var(--exp)":pc>=80?"var(--warn)":"var(--ac)"}"></i></div><div class="sub">${b>=bs?"남은 예산 "+won(b-bs):"초과 "+won(bs-b)} · 작성자가 공동인 지출만 차감</div>`:`<div class="sub">설정 탭에서 월 예산을 정해 보세요</div>`}</div>
   ${S.uid==="와이프"&&aw?`<div class="card"><h3>💝 와이프 용돈 (나만 보여요)</h3><div class="row"><b>${won(au)} / ${won(aw)}</b><span class="sub">${Math.round(au/aw*100)}%</span></div><div class="bar"><i style="width:${Math.min(100,au/aw*100)}%;background:${au>=aw?"var(--exp)":au>=aw*.8?"var(--warn)":"var(--sp)"}"></i></div><div class="sub">${aw>=au?"남은 용돈 "+won(aw-au):"초과 "+won(au-aw)} · 공동 예산에는 안 잡혀요</div></div>`:""}
@@ -123,7 +127,7 @@ function listV(){
   <select id="fc"><option value="">분류 전체</option>${[...EC,...IC].map(c=>`<option ${S.cat===c?"selected":""}>${c}</option>`).join("")}</select></div></div><div id="lst"></div>`}
 function listItems(){
   const q=S.q.trim().toLowerCase();
-  let a=inM().filter(t=>(!q||((t.memo||"")+t.cat+(t.pay||"")).toLowerCase().includes(q))&&(!S.cat||t.cat===S.cat)&&(!S.who||t.uid===S.who));
+  let a=inM().filter(t=>(!q||((t.memo||"")+t.cat+(t.pay||"")).toLowerCase().includes(q))&&(!S.cat||t.cat===S.cat)&&(!S.who||(S.who==="공동"||S.who==="그외"?String(t.uid).startsWith(S.who):t.uid===S.who)));
   a.sort((x,y)=>(y.date+(y.ts||0)).localeCompare(x.date+(x.ts||0)));
   if(!a.length)return '<div class="msg">내역이 없어요</div>';
   let h="",d="";
@@ -196,10 +200,10 @@ function paintForm(){
   document.querySelectorAll("[data-ty]").forEach(b=>b.classList.toggle("on",b.dataset.ty===F.type));
   const cs=F.type==="exp"?EC:IC;if(F.type==="inc"&&F.uid!=="남편"&&F.uid!=="와이프")F.uid=S.uid;if(!cs.includes(F.cat)){F.cat=cs[0];if(F.cat==="남편 월급")F.uid="남편"}
   $("#fcat").innerHTML=cs.map(c=>`<button class="chip ${F.cat===c?"on":""}" data-c="${c}">${c}</button>`).join("");
-  $("#fph").textContent=F.type==="exp"&&(F.pay==="파킹통장"||F.pay==="계좌이체")?"작성자가 남편/와이프면 그 사람의 기본자산 파킹통장에서 자동 차감돼요 (공동·그외는 차감 안 돼요)":"";
+  $("#fph").textContent=F.type==="exp"&&(F.pay==="파킹통장"||F.pay==="계좌이체")?"누가 썼나에서 고른 사람(남편/와이프)의 기본자산 파킹통장에서 자동 차감돼요":"";
   $("#fpay").style.display=F.type==="inc"?"none":"";$("#fwl").textContent=F.type==="inc"?(/월급/.test(F.cat)?"누구 수입인가":"누구 수입인가 (이 사람 파킹통장에 자동으로 더해져요)"):"누가 썼나";
   $("#fal").innerHTML=S.uid==="와이프"&&F.type==="exp"?`<button class="chip ${F.allow?"on":""}" data-al="1">💝 와이프 용돈으로 쓴 지출</button>`:"";
-  $("#fwho").innerHTML=(F.type==="inc"?["남편","와이프"]:["남편","와이프","공동","그외"]).map(c=>`<button class="chip ${F.uid===c?"on":""}" data-w="${c}">${c}</button>`).join("");
+  $("#fwho").innerHTML=(F.type==="inc"?["남편","와이프"]:["남편","와이프","공동(남편)","공동(와이프)","그외(남편)","그외(와이프)"]).map(c=>`<button class="chip ${F.uid===c?"on":""}" data-w="${c}">${c}</button>`).join("");
   $("#fpay").innerHTML=PAYS.map(c=>`<button class="chip ${F.pay===c?"on":""}" data-p="${c}">${c}</button>`).join("")}
 async function saveTx(){
   const amt=+$("#fa").value;if(!(amt>0)){toast("금액을 입력해 주세요");return}
@@ -207,7 +211,7 @@ async function saveTx(){
   try{
     if(F.id)await db.collection("tx").doc(F.id).set(d);else await db.collection("tx").add(d);
     $("#ov").remove();
-    if(d.type==="exp"&&d.uid==="공동"&&S.set.budget){const[ka,kb]=rng(keyOf(d.date));const sp=S.tx.filter(t=>t.type==="exp"&&t.date>=ka&&t.date<kb&&t.uid==="공동"&&t.id!==F.id).reduce((s,t)=>s+(+t.amount||0),0)+amt;
+    if(d.type==="exp"&&String(d.uid).startsWith("공동")&&S.set.budget){const[ka,kb]=rng(keyOf(d.date));const sp=S.tx.filter(t=>t.type==="exp"&&t.date>=ka&&t.date<kb&&String(t.uid).startsWith("공동")&&t.id!==F.id).reduce((s,t)=>s+(+t.amount||0),0)+amt;
       if(sp>S.set.budget)toast("🚨 월 예산을 초과했어요");else if(sp>=S.set.budget*.8)toast("⚠️ 예산의 "+Math.round(sp/S.set.budget*100)+"%를 썼어요")}
   }catch(e){toast("저장 실패, 다시 시도해 주세요")}}
 
@@ -242,8 +246,8 @@ function prodV(){
   ${S.pe?"":`<div class="card f"><h3>예적금 추가</h3>${prForm({})}<div class="sub">이자는 단리 기준 추정치예요 (적금은 매월 납입 단리 방식). 세후는 일반과세 15.4%를 뺀 값이고, 실제 금액은 상품 조건에 따라 달라요.</div></div>`}`}
 
 function pkAdj(){const b=S.set.base||{},r={남편:0,와이프:0};
-  S.tx.forEach(t=>{if(r[t.uid]===undefined||t.allow||(b.date&&t.date<b.date))return;const a=+t.amount||0;
-    if(t.type==="inc"&&t.cat!=="남편 월급"&&t.cat!=="와이프 월급")r[t.uid]+=a;else if(t.type==="exp"&&(t.pay==="파킹통장"||t.pay==="계좌이체"))r[t.uid]-=a});return r}
+  S.tx.forEach(t=>{if(r[payer(t.uid)]===undefined||t.allow||(b.date&&t.date<b.date))return;const a=+t.amount||0;
+    if(t.type==="inc"&&t.cat!=="남편 월급"&&t.cat!=="와이프 월급")r[payer(t.uid)]+=a;else if(t.type==="exp"&&(t.pay==="파킹통장"||t.pay==="계좌이체"))r[payer(t.uid)]-=a});return r}
 function assetV(){
   const b=S.set.base||{},ow=["남편","와이프"],B=o=>({dep:0,sav:0,park:0,stock:0,sub:0,hc:0,hd:0,...((b.m||{})[o]||{})}),s4=x=>(+x.dep||0)+(+x.park||0)+(+x.stock||0)+(+x.sav||0)+(+x.sub||0)+(+x.hc||0)+(+x.hd||0),
     pk=pkAdj(),lg=s4(b),bo={남편:s4(B("남편"))+pk.남편,와이프:s4(B("와이프"))+pk.와이프},bt=bo.남편+bo.와이프+lg,cm=ymOf(new Date()),by={},co={남편:0,와이프:0,공동:0};
@@ -282,7 +286,7 @@ document.addEventListener("click",e=>{
   if(D.tab){S.tab=D.tab;render()}else if(D.mm)shiftM(+D.mm);
   else if(D.edit){const x=S.tx.find(v=>v.id===D.edit);if(x){if(x.type==="sav")toast("고정저축은 설정 탭에서 관리해요");else openForm(x)}}
   else if(t.id==="fab"){if(db)openForm();else toast("로그인이 필요해요")}
-  else if(D.ty){F.type=D.ty;paintForm()}else if(D.c){F.cat=D.c;if(D.c==="남편 월급")F.uid="남편";if(D.c==="와이프 월급")F.uid="와이프";paintForm()}else if(D.p){F.pay=D.p;paintForm()}else if(D.w){F.uid=D.w;if(D.w==="공동"||D.w==="그외")F.allow=false;paintForm()}else if(D.al){F.allow=!F.allow;if(F.allow)F.uid="와이프";paintForm()}
+  else if(D.ty){F.type=D.ty;paintForm()}else if(D.c){F.cat=D.c;if(D.c==="남편 월급")F.uid="남편";if(D.c==="와이프 월급")F.uid="와이프";paintForm()}else if(D.p){F.pay=D.p;paintForm()}else if(D.w){F.uid=D.w;if(/^(공동|그외)/.test(D.w))F.allow=false;paintForm()}else if(D.al){F.allow=!F.allow;if(F.allow)F.uid="와이프";paintForm()}
   else if(t.id==="fs")saveTx();else if(t.id==="fx")$("#ov").remove();
   else if(t.id==="fdel"){if(confirm("이 내역을 삭제할까요?"))db.collection("tx").doc(F.id).delete().then(()=>$("#ov").remove()).catch(()=>toast("삭제 실패"))}
   else if(D.add){const[k,o]=D.add.split("|"),n=$("#"+k+"n-"+o).value.trim(),a=+$("#"+k+"a-"+o).value,d=+$("#"+k+"d-"+o).value;
