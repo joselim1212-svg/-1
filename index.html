@@ -153,7 +153,7 @@ function statsV(){
 function fxCard(k){
   const s=S.set,fe=S.fe||{},L=(k==="fx"?s.fixed:s.fsav)||[],nm=k==="fx"?"고정지출":"고정저축",sm=a=>a.reduce((x,f)=>x+(+f.amount||0),0);
   const fm=(o,ed)=>{const v=g=>ed&&g!=null?g:"";return `<input id="${k}n-${o}" placeholder="이름" value="${esc(v(fe.name))}"><input id="${k}a-${o}" type="number" inputmode="numeric" placeholder="금액" value="${v(fe.amount)}"><input id="${k}d-${o}" type="number" inputmode="numeric" placeholder="매월 며칠 (1~31)" value="${v(fe.day)}">
-  ${k==="fx"?`<select id="fxc-${o}">${EC.map(c=>`<option ${ed&&fe.cat===c?"selected":""}>${c}</option>`).join("")}</select><select id="fxp-${o}">${PAYS.map(c=>`<option ${ed&&fe.pay===c?"selected":""}>${c}</option>`).join("")}</select>`:""}
+  ${k==="fx"?`<select id="fxc-${o}">${EC.map(c=>`<option ${ed&&fe.cat===c?"selected":""}>${c}</option>`).join("")}</select><select id="fxp-${o}">${[...PAYS,"단순 기록용"].map(c=>`<option ${ed&&fe.pay===c?"selected":""}>${c}</option>`).join("")}</select>`:""}
   <button class="btn" data-add="${k}|${o}">${ed?"수정 저장":o+" 추가"}</button>${ed?'<button class="btn g" data-fcancel="1">취소</button>':""}`};
   return `<div class="card f"><h3>${k==="fx"?"🔁":"🏦"} ${nm} (매월 자동 입력)</h3><div class="sub">총 ${nm}: <b>${won(sm(L))}</b> / 월${k==="fs"?" (부부 총 자산에 매달 합산돼요)":""}</div>
   ${["남편","와이프"].map(o=>{const it=L.filter(f=>(f.owner||"공동")===o),ed=fe.k===k&&fe.o===o,v=g=>ed&&g!=null?g:"";
@@ -161,7 +161,7 @@ function fxCard(k){
   ${it.map(f=>ed&&fe.id===f.id?`<div class="f" style="border:1px solid var(--ac);border-radius:10px;padding:8px"><b>✏️ 수정 중</b>${fm(o,ed)}</div>`:`<div class="row"><span>${esc(f.name)} · 매월 ${f.day}일<br><span class="sub">${k==="fx"?esc(f.cat)+" · "+esc(f.pay)+" · ":""}${won(f.amount)}</span></span><span><button class="chip" data-ef="${k}|${esc(f.id)}">수정</button> <button class="chip" data-df="${k}|${esc(f.id)}">삭제</button></span></div>`).join("")||'<div class="sub">없음</div>'}
 ${ed?"":fm(o,ed)}</div>`}).join("")}
   ${(()=>{const lg=L.filter(f=>(f.owner||"공동")==="공동");return lg.length?`<div class="f" style="border-top:1px solid var(--line);padding-top:10px;margin-top:6px"><b>예전 공동 항목</b><div class="sub">남편/와이프 칸에 다시 입력한 뒤 여기서 삭제해 주세요</div>${lg.map(f=>`<div class="row"><span>${esc(f.name)} · 매월 ${f.day}일<br><span class="sub">${won(f.amount)}</span></span><button class="chip" data-df="${k}|${esc(f.id)}">삭제</button></div>`).join("")}</div>`:""})()}
-  ${k==="fx"?'<div class="sub">고정지출은 월 예산(공동 지출)에서 차감되지 않아요. 수정은 앞으로의 입력부터 적용돼요.</div>':""}</div>`}
+  ${k==="fx"?'<div class="sub">고정지출은 월 예산(공동 지출)에서 차감되지 않아요. 수정은 앞으로의 입력부터 적용돼요. 결제수단을 "단순 기록용"으로 하면 고정지출 합계에만 포함되고 홈·내역·이번 기간 지출에는 기록되지 않아요.</div>':""}</div>`}
 function setV(){
   const s=S.set,fe=S.fe||{},totF=(s.fixed||[]).reduce((x,f)=>x+(+f.amount||0),0),totS=(s.fsav||[]).reduce((x,f)=>x+(+f.amount||0),0);
   return `<div class="card f"><h3>월 예산</h3><input id="sb" type="number" inputmode="numeric" placeholder="월 예산 (원)" value="${s.budget||""}"><div class="sub">한 기간 동안 쓰려는 공동 지출 한도예요. 작성자가 '공동'인 지출만 예산에서 차감되고, 남편·와이프 개인 지출은 차감되지 않아요. 지출이 예산의 80%를 넘으면 '초과 직전' 알림이, 예산을 넘기면 '초과' 알림이 떠요. 내역을 저장할 때와 홈 화면에서 앱 안에서 알려줘요.</div><div class="sub">한 달이 시작되는 날 (카드 결제 기준일, 1~28)</div><input id="sd" type="number" inputmode="numeric" min="1" max="28" value="${sd()}"></div>
@@ -214,7 +214,7 @@ async function saveTx(){
 function runFixed(){
   if(S.ran||!S.lt||!S.ls||!db)return;S.ran=true;
   const now=new Date(),today=dstr(now),ym=ymOf(now),dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate(),ids=new Set(S.tx.map(t=>t.id));
-  (S.set.fixed||[]).forEach(f=>{const day=Math.min(+f.day||1,dim);if(now.getDate()<day)return;const id="fx_"+f.id+"_"+ym;if(ids.has(id))return;
+  (S.set.fixed||[]).forEach(f=>{if(f.pay==="단순 기록용")return;const day=Math.min(+f.day||1,dim);if(now.getDate()<day)return;const id="fx_"+f.id+"_"+ym;if(ids.has(id))return;
     db.collection("tx").doc(id).set({type:"exp",amount:+f.amount,cat:f.cat,pay:f.pay,date:ym+"-"+pad(day),memo:f.name+" (고정)",uid:f.owner||"공동",ts:Date.now()}).catch(()=>{})});
   (S.set.fsav||[]).forEach(f=>{const since=f.since||today;let y=+since.slice(0,4),m=+since.slice(5,7);
     for(;;){const k=y+"-"+pad(m);if(k>ym)break;const ds=k+"-"+pad(Math.min(+f.day||1,new Date(y,m,0).getDate()));
